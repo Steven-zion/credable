@@ -1,2 +1,5 @@
 middleware/.env
 middleware/node_modules
+
+lms/.env
+lms/node_modules

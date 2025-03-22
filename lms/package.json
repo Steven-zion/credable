@@ -1,0 +1,17 @@
+{
+	"name": "lms",
+	"version": "1.0.0",
+	"description": "lending management system",
+	"type": "module",
+	"main": "server.js",
+	"scripts": {
+		"start": "node server.js",
+		"server": "nodemon server.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"express": "^4.21.2"
+	}
+}
