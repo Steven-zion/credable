@@ -10,16 +10,14 @@ const app = express();
 app.use(express.json());
 
 let scoringToken = "";
-let authUsername = "SteveN";
-let authPassword = "passcode101";
 
 // Register Middleware with Scoring Engine
 async function registerMiddleware() {
 	const payload = {
 		url: "http://localhost:4000/transactions",
 		name: "TransactionMiddleware",
-		username: authUsername,
-		password: authPassword,
+		username: process.env.MIDDLEWARE_USER,
+		password: process.env.MIDDLEWARE_PASSWORD,
 	};
 	try {
 		const res = await axios.post(
