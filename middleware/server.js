@@ -8,6 +8,10 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
+// Define auth credentials and API key from environment variables
+const authUsername = process.env.MIDDLEWARE_USER || "middleware_user";
+const authPassword = process.env.MIDDLEWARE_PASSWORD || "middleware_pass";
+const LMS_API_KEY = process.env.LMS_API_KEY || "lms-secret-key";
 let scoringToken = "";
 
 // Register Middleware with Scoring Engine
@@ -15,13 +19,14 @@ async function registerMiddleware() {
 	const payload = {
 		url: "http://localhost:4000/transactions",
 		name: "TransactionMiddleware",
-		username: process.env.MIDDLEWARE_USER,
-		password: process.env.MIDDLEWARE_PASSWORD,
+		username: authUsername,
+		password: authPassword,
 	};
 	try {
 		const res = await axios.post(
 			"https://scoringtest.credable.io/api/v1/client/createClient",
-			payload
+			payload,
+			{ timeout: 30000 }
 		);
 		scoringToken = res.data.token;
 		console.log("Middleware registered successfully, token:", scoringToken);
@@ -37,6 +42,19 @@ async function registerMiddleware() {
 }
 registerMiddleware();
 
+// Token Endpoint for LMS
+app.get("/token", (req, res) => {
+	const apiKey = req.headers["x-api-key"];
+	if (apiKey !== LMS_API_KEY) {
+		return res.status(401).json({ error: "Unauthorized" });
+	}
+	if (!scoringToken) {
+		return res.status(503).json({ error: "Scoring token not available" });
+	}
+	console.log("Sending scoring token to LMS:", scoringToken);
+	res.json({ scoringToken });
+});
+
 // Transactions Endpoint for Scoring Engine
 app.get("/transactions", async (req, res) => {
 	const customerNumber = req.query.customerNumber;
@@ -48,6 +66,8 @@ app.get("/transactions", async (req, res) => {
 	const expectedAuth = `Basic ${Buffer.from(
 		`${authUsername}:${authPassword}`
 	).toString("base64")}`;
+	console.log("Expected Auth:", expectedAuth);
+	console.log("Received Auth:", auth);
 	if (!auth || auth !== expectedAuth) {
 		return res.status(401).json({ error: "Unauthorized" });
 	}
@@ -59,8 +79,8 @@ app.get("/transactions", async (req, res) => {
 		);
 		soapClient.setSecurity(
 			new soap.BasicAuthSecurity(
-				process.env.CBS_USERNAME,
-				process.env.CBS_PASSWORD
+				process.env.CBS_USERNAME || "admin",
+				process.env.CBS_PASSWORD || "pwd123"
 			)
 		);
 		const [transactions] = await soapClient.getTransactionsAsync({
