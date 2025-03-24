@@ -11,10 +11,7 @@ app.use(express.json());
 
 // MongoDB Atlas Connection
 mongoose
-	.connect(process.env.MONGO_ATLAS_URI, {
-		useNewUrlParser: true,
-		useUnifiedTopology: true,
-	})
+	.connect(process.env.MONGO_ATLAS_URI)
 	.then(() => {
 		console.log("Connected to MongoDB Atlas");
 	})
@@ -23,14 +20,14 @@ mongoose
 		process.exit(1);
 	});
 
-// Customer Schema (to store KYC data)
+// Customer Schema
 const CustomerSchema = new mongoose.Schema({
 	customerNumber: { type: String, required: true, unique: true },
 	kycData: { type: Object, required: true },
 });
 const Customer = mongoose.model("Customer", CustomerSchema);
 
-// Loan Schema (to store loan requests)
+// Loan Schema
 const LoanSchema = new mongoose.Schema({
 	customerNumber: { type: String, required: true },
 	amount: { type: Number, required: true },
@@ -79,13 +76,11 @@ async function queryKYC(customerNumber) {
 			)
 		);
 
-		// Access the CoreBankingService as defined in the WSDL
 		const coreBankingService = soapClient.CoreBankingService;
 		if (!coreBankingService) {
 			throw new Error("CoreBankingService not found on soapClient");
 		}
 
-		// Access the CustomerPortSoap11 port within CoreBankingService
 		const customerPortSoap11 = coreBankingService.CustomerPortSoap11;
 		if (!customerPortSoap11) {
 			throw new Error("CustomerPortSoap11 not found on CoreBankingService");
@@ -101,7 +96,6 @@ async function queryKYC(customerNumber) {
 			});
 		});
 
-		// Extract the customer data from the response
 		const kycData = response.customer;
 		if (!kycData) {
 			throw new Error("No customer data in KYC response");
@@ -112,7 +106,14 @@ async function queryKYC(customerNumber) {
 	} catch (error) {
 		console.error("Error querying KYC:", error.message);
 		console.warn("Mocking KYC data due to API error");
-		return { customerNumber, name: "Test User" };
+		// Dynamic mock data as a fallback
+		return {
+			customerNumber,
+			firstName: `MockFirstName${customerNumber}`,
+			lastName: `MockLastName${customerNumber}`,
+			email: `mock${customerNumber}@example.com`,
+			monthlyIncome: getRandomNumber(2000, 10000),
+		};
 	}
 }
 
