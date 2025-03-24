@@ -14,7 +14,7 @@ app.post("/api/v1/client/createClient", (req, res) => {
 		return res.status(400).json({ error: "Missing required fields" });
 	}
 
-	const clientId = Object.keys(registeredClients).length;
+	const clientId = Object.keys(registeredClients).length + 1;
 	const token = `uuid-token-${clientId}`;
 	registeredClients[token] = {
 		clientName,

@@ -21,7 +21,7 @@ async function registerMiddleware() {
 			clientDescription: "Middleware for LMS",
 			clientUrl: "http://localhost:4000/transactions",
 			username: "middleware_user",
-			password: "middleware_pass",
+			password: "middleware_pwd",
 		};
 
 		// Try the original Scoring Engine first
