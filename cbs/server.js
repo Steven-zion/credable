@@ -1,21 +1,21 @@
 import express from "express";
 import soap from "soap";
 
-// Utility function to generate random numbers within a range
+// utility function to generate random numbers within a range
 const getRandomNumber = (min, max) => Math.random() * (max - min) + min;
 
-// Utility function to generate a random integer within a range
+// generate a random integer within a range
 const getRandomInt = (min, max) =>
 	Math.floor(Math.random() * (max - min + 1)) + min;
 
-// Utility function to generate a timestamp within a range of years
+// generate a timestamp within a range of years
 const getRandomTimestamp = (startYear, endYear) => {
 	const start = new Date(startYear, 0, 1).getTime();
 	const end = new Date(endYear, 11, 31).getTime();
 	return getRandomInt(start, end);
 };
 
-// WSDL (unchanged from previous update, matches the documentation)
+// WSDL definition
 const wsdl = `
 <definitions name="CoreBankingService"
   targetNamespace="http://credable.io/cbs"
@@ -238,7 +238,6 @@ const service = {
 				console.log(
 					`Received KYC request for customerNumber: ${customerNumber}`
 				);
-				// Dynamic KYC data (already dynamic, but let's ensure no static values)
 				const kycData = {
 					customerNumber,
 					firstName: `FirstName${customerNumber}`,
@@ -352,7 +351,6 @@ const service = {
 	},
 };
 
-// Expose both endpoints on the same server
 const app = express();
 soap.listen(app, "/service/customer", service, wsdl);
 soap.listen(app, "/service/transactions", service, wsdl);

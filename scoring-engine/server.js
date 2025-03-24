@@ -8,7 +8,6 @@ app.use(express.json());
 const registeredClients = {};
 const scoringData = {};
 
-// Register a client (Middleware)
 app.post("/api/v1/client/createClient", (req, res) => {
 	const { clientName, clientDescription, clientUrl, username, password } =
 		req.body;
@@ -34,7 +33,6 @@ app.post("/api/v1/client/createClient", (req, res) => {
 	res.json({ token });
 });
 
-// Initiate Scoring
 app.get(
 	"/api/v1/scoring/initiateQueryScore/:customerNumber",
 	async (req, res) => {
@@ -60,7 +58,6 @@ app.get(
 				transactionRes.data
 			);
 
-			// Calculate total credit amount from transactions
 			const totalCreditAmount = transactionRes.data.reduce(
 				(sum, transaction) =>
 					sum + (transaction.alternativechanneltrnscrAmount || 0),
@@ -70,12 +67,11 @@ app.get(
 				`Total Credit Amount for ${customerNumber}: ${totalCreditAmount}`
 			);
 
-			// Store scoring data for this customer
 			const scoreToken = uuidv4();
 			scoringData[scoreToken] = {
 				customerNumber,
 				totalCreditAmount,
-				limitAmount: totalCreditAmount * 2, // Calculate limitAmount
+				limitAmount: totalCreditAmount * 2,
 			};
 
 			res.json({ token: scoreToken });
@@ -86,7 +82,6 @@ app.get(
 	}
 );
 
-// Query Score
 app.get("/api/v1/scoring/queryScore/:token", (req, res) => {
 	const { token } = req.params;
 	const clientToken = req.headers["client-token"];
@@ -99,14 +94,14 @@ app.get("/api/v1/scoring/queryScore/:token", (req, res) => {
 		return res.status(404).json({ error: "Scoring token not found" });
 	}
 
-	// Return the score and limitAmount
-	const score = 750; // Placeholder score
+	// Dynamic score based on totalCreditAmount
+	const score = Math.min(850, 300 + data.totalCreditAmount / 1000); // score increases with credit amount
+
 	res.json({
 		score,
 		limitAmount: data.limitAmount,
 	});
 
-	// Clean up
 	delete scoringData[token];
 });
 
