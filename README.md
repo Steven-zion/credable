@@ -139,6 +139,7 @@ The servers communicate via HTTP (REST) and SOAP protocols, with authentication 
    cd credable
    cd lms or cd scoring-engine or cd cbs or cd middleware
    ```
+
    - NOTE: cd into each of the server and setup.
 
 2. **Install Dependencies**
@@ -227,6 +228,8 @@ The system can be tested using Postman or cURL. Below are the steps to test the 
 - **Endpoint**: `POST http://localhost:3000/loan/request`
 - **Request**:
 
+  - Body: (Depends on the `limitAmount`)
+
   ```json
   {
   	"customerNumber": "234774784",
@@ -237,7 +240,6 @@ The system can be tested using Postman or cURL. Below are the steps to test the 
 - **Expected Response**:
 
   - Status: `200 OK`
-  - Body: (Depends on the `limitAmount`)
 
     ```json
     {
