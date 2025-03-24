@@ -13,15 +13,19 @@ let authUsername = "";
 let authPassword = "";
 let scoringEngineUrl = "https://scoringtest.credable.io";
 
-// Register Middleware with Scoring Engine
+// Utility functions for dynamic data
+const getRandomNumber = (min, max) => Math.random() * (max - min) + min;
+const getRandomInt = (min, max) =>
+	Math.floor(Math.random() * (max - min + 1)) + min;
+
 async function registerMiddleware() {
 	try {
 		const payload = {
 			clientName: "middleware",
 			clientDescription: "Middleware for LMS",
 			clientUrl: "http://localhost:4000/transactions",
-			username: "middleware_user",
-			password: "middleware_pass",
+			username: process.env.MIDDLEWARE_USERNAME || "middleware_user",
+			password: process.env.MIDDLEWARE_PASSWORD || "middleware_pass",
 		};
 
 		console.log("Attempting to register with original Scoring Engine...");
@@ -51,8 +55,8 @@ async function registerMiddleware() {
 				clientName: "middleware",
 				clientDescription: "Middleware for LMS",
 				clientUrl: "http://localhost:4000/transactions",
-				username: "middleware_user",
-				password: "middleware_pass",
+				username: process.env.MIDDLEWARE_USERNAME || "middleware_user",
+				password: process.env.MIDDLEWARE_PASSWORD || "middleware_pass",
 			};
 			const res = await axios.post(
 				"http://localhost:5000/api/v1/client/createClient",
@@ -78,7 +82,6 @@ async function registerMiddleware() {
 	}
 }
 
-// Fetch Transactions from CBS
 app.get("/transactions", async (req, res) => {
 	const { customerNumber } = req.query;
 	if (!customerNumber) {
@@ -108,13 +111,11 @@ app.get("/transactions", async (req, res) => {
 			)
 		);
 
-		// Access the CoreBankingService as defined in the WSDL
 		const coreBankingService = soapClient.CoreBankingService;
 		if (!coreBankingService) {
 			throw new Error("CoreBankingService not found on soapClient");
 		}
 
-		// Access the TransactionPortSoap11 port within CoreBankingService
 		const transactionPortSoap11 = coreBankingService.TransactionPortSoap11;
 		if (!transactionPortSoap11) {
 			throw new Error("TransactionPortSoap11 not found on CoreBankingService");
@@ -140,10 +141,10 @@ app.get("/transactions", async (req, res) => {
 		console.error("Error fetching transactions:", error.message);
 		const mockTransactions = [
 			{
-				accountNumber: "mocked-account",
-				alternativechanneltrnscrAmount: 1000,
-				alternativechanneltrnscrNumber: 0,
-				alternativechanneltrnsdebitAmount: 500,
+				accountNumber: `mocked-account-${customerNumber}`,
+				alternativechanneltrnscrAmount: getRandomNumber(1000, 10000),
+				alternativechanneltrnscrNumber: getRandomInt(0, 10),
+				alternativechanneltrnsdebitAmount: getRandomNumber(500, 5000),
 			},
 		];
 		console.log("Mocked transactions:", mockTransactions);
@@ -151,7 +152,6 @@ app.get("/transactions", async (req, res) => {
 	}
 });
 
-// Provide Scoring Token and Scoring Engine URL to LMS
 app.get("/token", (req, res) => {
 	const apiKey = req.headers["x-api-key"];
 	if (apiKey !== process.env.LMS_API_KEY) {
@@ -162,7 +162,6 @@ app.get("/token", (req, res) => {
 	res.json({ scoringToken, scoringEngineUrl });
 });
 
-// Start the Middleware
 registerMiddleware()
 	.then(() => {
 		app.listen(4000, () => console.log("Middleware running on port 4000"));
