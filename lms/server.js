@@ -98,7 +98,7 @@ async function queryKYC(customerNumber) {
 
 		return kycData;
 	} catch (error) {
-		console.error("Error querying KYC:", error.message);
+		console.error("Error querying KYC:", error);
 		console.warn("Mocking KYC data due to API error");
 		return { customerNumber, name: "Test User" };
 	}
