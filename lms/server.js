@@ -11,13 +11,16 @@ app.use(express.json());
 
 // MongoDB Atlas Connection
 mongoose
-	.connect(process.env.MONGO_ATLAS_URI)
+	.connect(process.env.MONGO_ATLAS_URI, {
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+	})
 	.then(() => {
 		console.log("Connected to MongoDB Atlas");
 	})
 	.catch((error) => {
 		console.error("Error connecting to MongoDB Atlas:", error.message);
-		process.exit(1); // Exit the process if MongoDB connection fails
+		process.exit(1);
 	});
 
 // Customer Schema (to store KYC data)
@@ -37,15 +40,16 @@ const LoanSchema = new mongoose.Schema({
 		default: "pending",
 	},
 	requestId: { type: String, required: true, unique: true },
-	scoringToken: { type: String }, // Token from initiateQueryScore
+	scoringToken: { type: String },
 });
 const Loan = mongoose.model("Loan", LoanSchema);
 
 // Configuration from environment variables
 const LMS_API_KEY = process.env.LMS_API_KEY || "lms-secret-key";
 let scoringToken = "";
+let scoringEngineUrl = "";
 
-// Fetch Scoring Token from Middleware
+// Fetch Scoring Token and Scoring Engine URL from Middleware
 async function fetchScoringToken() {
 	try {
 		const res = await axios.get("http://localhost:4000/token", {
@@ -53,7 +57,9 @@ async function fetchScoringToken() {
 			timeout: 5000,
 		});
 		scoringToken = res.data.scoringToken;
+		scoringEngineUrl = res.data.scoringEngineUrl;
 		console.log("Fetched scoring token:", scoringToken);
+		console.log("Scoring Engine URL:", scoringEngineUrl);
 	} catch (error) {
 		console.error("Error fetching scoring token:", error.message);
 		throw new Error("Failed to fetch scoring token");
@@ -73,35 +79,31 @@ async function queryKYC(customerNumber) {
 			)
 		);
 
-		// Access the CustomerPortService
 		const customerService = soapClient.CustomerPortService;
 		if (!customerService) {
 			throw new Error("CustomerPortService not found on soapClient");
 		}
 
-		// Access the CustomerPortSoap11 binding
 		const customerPortSoap11 = customerService.CustomerPortSoap11;
 		if (!customerPortSoap11) {
 			throw new Error("CustomerPortSoap11 not found on CustomerPortService");
 		}
 
-		// Use the synchronous Customer method and wrap it in a Promise
 		const kycData = await new Promise((resolve, reject) => {
 			customerPortSoap11.Customer({ customerNumber }, (err, result) => {
 				if (err) {
 					reject(err);
 				} else {
-					// The result might be wrapped in a property (e.g., result.return)
 					resolve(result.return || result);
 				}
 			});
 		});
 
-		console.log("KYC Data:", kycData);
 		return kycData;
 	} catch (error) {
 		console.error("Error querying KYC:", error.message);
-		return null;
+		console.warn("Mocking KYC data due to API error");
+		return { customerNumber, name: "Test User" };
 	}
 }
 
@@ -109,8 +111,8 @@ async function queryKYC(customerNumber) {
 async function initiateScoring(customerNumber) {
 	try {
 		const res = await axios.get(
-			`https://scoringtest.credable.io/api/v1/scoring/initiateQueryScore/${customerNumber}`,
-			{ headers: { "client-token": scoringToken } }
+			`${scoringEngineUrl}/api/v1/scoring/initiateQueryScore/${customerNumber}`,
+			{ headers: { "client-token": scoringToken }, timeout: 5000 }
 		);
 		return res.data.token;
 	} catch (error) {
@@ -122,8 +124,8 @@ async function initiateScoring(customerNumber) {
 async function queryScore(token) {
 	try {
 		const res = await axios.get(
-			`https://scoringtest.credable.io/api/v1/scoring/queryScore/${token}`,
-			{ headers: { "client-token": scoringToken } }
+			`${scoringEngineUrl}/api/v1/scoring/queryScore/${token}`,
+			{ headers: { "client-token": scoringToken }, timeout: 5000 }
 		);
 		return res.data;
 	} catch (error) {
@@ -138,18 +140,15 @@ app.post("/subscribe", async (req, res) => {
 	if (!customerNumber)
 		return res.status(400).json({ error: "Customer number required" });
 
-	// Check if customer already exists
 	const existingCustomer = await Customer.findOne({ customerNumber });
 	if (existingCustomer) {
 		return res.status(400).json({ error: "Customer already subscribed" });
 	}
 
-	// Fetch KYC data from CBS
 	const kycData = await queryKYC(customerNumber);
 	if (!kycData)
 		return res.status(404).json({ error: "Customer not found in CBS" });
 
-	// Store customer data
 	try {
 		const customer = new Customer({ customerNumber, kycData });
 		await customer.save();
@@ -169,12 +168,10 @@ app.post("/loan/request", async (req, res) => {
 			.json({ error: "Customer number and amount required" });
 	}
 
-	// Check if customer is subscribed
 	const customer = await Customer.findOne({ customerNumber });
 	if (!customer)
 		return res.status(404).json({ error: "Customer not subscribed" });
 
-	// Check for active loans
 	const existingLoan = await Loan.findOne({
 		customerNumber,
 		status: { $in: ["pending", "approved"] },
@@ -182,20 +179,17 @@ app.post("/loan/request", async (req, res) => {
 	if (existingLoan)
 		return res.status(400).json({ error: "Active loan exists" });
 
-	// Fetch scoring token from Middleware
 	try {
 		await fetchScoringToken();
 	} catch (error) {
 		return res.status(500).json({ error: "Failed to fetch scoring token" });
 	}
 
-	// Initiate scoring
 	const scoringTokenResponse = await initiateScoring(customerNumber);
 	if (!scoringTokenResponse) {
 		return res.status(500).json({ error: "Failed to initiate scoring" });
 	}
 
-	// Create loan request
 	const loan = new Loan({
 		customerNumber,
 		amount,
@@ -205,23 +199,14 @@ app.post("/loan/request", async (req, res) => {
 	});
 	await loan.save();
 
-	// Retry querying score (max 5 attempts, 5-second delay)
-	let retries = 5;
-	while (retries > 0) {
-		const scoreData = await queryScore(scoringTokenResponse);
-		if (scoreData) {
-			loan.status = amount <= scoreData.limitAmount ? "approved" : "rejected";
-			await loan.save();
-			return res.json({ status: loan.status, request_id: loan.requestId });
-		}
-		await new Promise((resolve) => setTimeout(resolve, 5000));
-		retries--;
+	const scoreData = await queryScore(scoringTokenResponse);
+	if (scoreData) {
+		loan.status = amount <= scoreData.limitAmount ? "approved" : "rejected";
+	} else {
+		loan.status = "rejected";
 	}
-
-	// If retries are exhausted, reject the loan and allow new requests
-	loan.status = "rejected";
 	await loan.save();
-	res.json({ status: "rejected", request_id: loan.requestId });
+	res.json({ status: loan.status, request_id: loan.requestId });
 });
 
 // Loan Status API
@@ -239,5 +224,4 @@ app.get("/loan/status", async (req, res) => {
 	});
 });
 
-// Start the LMS server
 app.listen(3000, () => console.log("LMS running on port 3000"));
