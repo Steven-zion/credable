@@ -71,8 +71,8 @@ async function queryKYC(customerNumber) {
 		);
 		soapClient.setSecurity(
 			new soap.BasicAuthSecurity(
-				process.env.CBS_USERNAME || "admin",
-				process.env.CBS_PASSWORD || "pwd123"
+				process.env.CBS_USERNAME,
+				process.env.CBS_PASSWORD
 			)
 		);
 
