@@ -99,7 +99,7 @@ app.get("/transactions", async (req, res) => {
 
 	try {
 		const soapClient = await soap.createClientAsync(
-			"http://localhost:8093/service/transactions?wsdl" // Updated to use the unified mock CBS API
+			"http://localhost:8093/service/transactions?wsdl"
 		);
 		soapClient.setSecurity(
 			new soap.BasicAuthSecurity(
@@ -108,14 +108,29 @@ app.get("/transactions", async (req, res) => {
 			)
 		);
 
+		// Access the CoreBankingService as defined in the WSDL
+		const coreBankingService = soapClient.CoreBankingService;
+		if (!coreBankingService) {
+			throw new Error("CoreBankingService not found on soapClient");
+		}
+
+		// Access the TransactionPortSoap11 port within CoreBankingService
+		const transactionPortSoap11 = coreBankingService.TransactionPortSoap11;
+		if (!transactionPortSoap11) {
+			throw new Error("TransactionPortSoap11 not found on CoreBankingService");
+		}
+
 		const response = await new Promise((resolve, reject) => {
-			soapClient.getTransactions({ customerNumber }, (err, result) => {
-				if (err) {
-					reject(err);
-				} else {
-					resolve(result);
+			transactionPortSoap11.getTransactions(
+				{ customerNumber },
+				(err, result) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(result);
+					}
 				}
-			});
+			);
 		});
 
 		const transactions = response.transactions || [];

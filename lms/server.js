@@ -11,7 +11,10 @@ app.use(express.json());
 
 // MongoDB Atlas Connection
 mongoose
-	.connect(process.env.MONGO_ATLAS_URI)
+	.connect(process.env.MONGO_ATLAS_URI, {
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+	})
 	.then(() => {
 		console.log("Connected to MongoDB Atlas");
 	})
@@ -63,11 +66,11 @@ async function fetchScoringToken() {
 	}
 }
 
-// Query KYC from CBS
+// Query KYC from Mock CBS
 async function queryKYC(customerNumber) {
 	try {
 		const soapClient = await soap.createClientAsync(
-			"http://localhost:8093/service/customer?wsdl" // Correct URL
+			"http://localhost:8093/service/customer?wsdl"
 		);
 		soapClient.setSecurity(
 			new soap.BasicAuthSecurity(
@@ -76,14 +79,16 @@ async function queryKYC(customerNumber) {
 			)
 		);
 
-		const customerService = soapClient.CustomerPortService;
-		if (!customerService) {
-			throw new Error("CustomerPortService not found on soapClient");
+		// Access the CoreBankingService as defined in the WSDL
+		const coreBankingService = soapClient.CoreBankingService;
+		if (!coreBankingService) {
+			throw new Error("CoreBankingService not found on soapClient");
 		}
 
-		const customerPortSoap11 = customerService.CustomerPortSoap11;
+		// Access the CustomerPortSoap11 port within CoreBankingService
+		const customerPortSoap11 = coreBankingService.CustomerPortSoap11;
 		if (!customerPortSoap11) {
-			throw new Error("CustomerPortSoap11 not found on CustomerPortService");
+			throw new Error("CustomerPortSoap11 not found on CoreBankingService");
 		}
 
 		const response = await new Promise((resolve, reject) => {
@@ -96,6 +101,7 @@ async function queryKYC(customerNumber) {
 			});
 		});
 
+		// Extract the customer data from the response
 		const kycData = response.customer;
 		if (!kycData) {
 			throw new Error("No customer data in KYC response");
