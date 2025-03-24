@@ -1,5 +1,6 @@
 import express from "express";
 import axios from "axios";
+import { v4 as uuidv4 } from "uuid"; // Import UUID v4
 
 const app = express();
 app.use(express.json());
@@ -14,8 +15,8 @@ app.post("/api/v1/client/createClient", (req, res) => {
 		return res.status(400).json({ error: "Missing required fields" });
 	}
 
-	const clientId = Object.keys(registeredClients).length + 1;
-	const token = `uuid-token-${clientId}`;
+	const clientId = uuidv4(); // Generate a UUID for the client ID
+	const token = uuidv4(); // Generate a UUID for the token
 	registeredClients[token] = {
 		clientName,
 		clientDescription,
@@ -65,7 +66,7 @@ app.get(
 			);
 
 			// Simulate generating a scoring token
-			const scoreToken = `score-token-${customerNumber}`;
+			const scoreToken = uuidv4(); // Generate a UUID for the score token
 			res.json({ token: scoreToken });
 		} catch (error) {
 			console.error("Error calling /transactions endpoint:", error.message);

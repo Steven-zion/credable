@@ -11,10 +11,7 @@ app.use(express.json());
 
 // MongoDB Atlas Connection
 mongoose
-	.connect(process.env.MONGO_ATLAS_URI, {
-		useNewUrlParser: true,
-		useUnifiedTopology: true,
-	})
+	.connect(process.env.MONGO_ATLAS_URI)
 	.then(() => {
 		console.log("Connected to MongoDB Atlas");
 	})
