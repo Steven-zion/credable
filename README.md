@@ -1,6 +1,6 @@
 # Loan Management System
 
-This project implements a Loan Management System (LMS) with a mock Core Banking System (CBS), a custom Scoring Engine, and a Middleware layer, as per the assessment requirements. The system is designed to run locally and can be tested using tools like Postman or cURL.
+This project implements a Loan Management System (LMS) with a mock Core Banking System (CBS), a custom Scoring Engine and a Middleware layer. The system is designed to run locally and can be tested using tools like Postman or cURL. It allows users to subscribe, request loan and check loan status.
 
 ## Project Overview
 
