@@ -1,6 +1,6 @@
 # Loan Management System
 
-This project implements a Loan Management System (LMS) with a mock Core Banking System (CBS), a custom Scoring Engine, and a Middleware layer, as per the assessment requirements. The system is designed to run locally and can be tested using tools like Postman or cURL.
+This project implements a Loan Management System (LMS) with a mock Core Banking System (CBS), a custom Scoring Engine, and a Middleware layer, as per the assessment requirements. The system is designed to run locally and can be tested using tools like Postman.
 
 ## Project Overview
 
@@ -10,23 +10,18 @@ The system consists of four backend servers that work together to simulate a loa
 - **Middleware**: Connects the LMS to the CBS and Scoring Engine, handling authentication and data retrieval.
 - **Loan Management System (LMS)**: Manages customer subscriptions and loan requests, storing data in MongoDB Atlas.
 
-The system meets the following requirements:
-- **Repo Link**: This GitHub repository contains all code.
-- **Screencast Video**: A demo video will be provided (link to be added after recording).
-- **Deployed and Running Modules**: The system can be cloned, set up, and run locally, with all modules fully functional.
-
 ## Project Structure
 
-- `mockCbsApi.js`: Mock CBS API (port 8093).
-- `scoringEngine.js`: Custom Scoring Engine (port 5000).
-- `middleware.js`: Middleware layer (port 4000).
-- `lms.js`: Loan Management System (port 3000).
-- `.env.example`: Template for environment variables.
+- `cbs/server.js`: Mock CBS API (port 8093).
+- `scoring-engine/server.js`: Custom Scoring Engine (port 5000).
+- `middleware/server.js`: Middleware layer (port 4000).
+- `lms/server.js`: Loan Management System (port 3000).
+- `.env`: file for environment variables.
 - `package.json`: Node.js dependencies and scripts.
 
 ## Server Functions
 
-### 1. Mock CBS API (`mockCbsApi.js`)
+### 1. Mock CBS API (`server.js`)
 - **Function**: Simulates a Core Banking System by providing KYC (Know Your Customer) and transaction data for customers.
 - **Endpoints**:
   - `/service/customer?wsdl` (SOAP): Returns KYC data for a given `customerNumber`.
@@ -39,7 +34,7 @@ The system meets the following requirements:
 - **Authentication**: Basic Auth (`admin:pwd123`, configurable via `.env`).
 - **Port**: `8093`.
 
-### 2. Custom Scoring Engine (`scoringEngine.js`)
+### 2. Custom Scoring Engine (`server.js`)
 - **Function**: Calculates a loan limit (`limitAmount`) and credit score for customers based on their transaction data.
 - **Endpoints**:
   - `/api/v1/client/createClient` (POST): Registers a client (e.g., Middleware) and returns a token.
@@ -59,7 +54,7 @@ The system meets the following requirements:
   - **Score**: `Math.min(850, 300 + (baseCreditAmount / 1000))` (ranges from 300 to 850).
 - **Port**: `5000`.
 
-### 3. Middleware (`middleware.js`)
+### 3. Middleware (`server.js`)
 - **Function**: Acts as an intermediary between the LMS, CBS, and Scoring Engine, handling authentication and data retrieval.
 - **Startup**:
   - Registers with the Scoring Engine (`http://localhost:5000/api/v1/client/createClient`) to get a `scoringToken`.
@@ -74,7 +69,7 @@ The system meets the following requirements:
 - **Fallback**: Returns mock transaction data if the CBS is unavailable.
 - **Port**: `4000`.
 
-### 4. Loan Management System (`lms.js`)
+### 4. Loan Management System (`server.js`)
 - **Function**: Manages customer subscriptions and loan requests, storing data in MongoDB Atlas.
 - **Database**:
   - `Customer` collection: Stores `customerNumber` and `kycData`.
