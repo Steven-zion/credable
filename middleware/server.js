@@ -11,7 +11,7 @@ app.use(express.json());
 let scoringToken = "";
 let authUsername = "";
 let authPassword = "";
-let scoringEngineUrl = "https://scoringtest.credable.io"; // Default to original Scoring Engine
+let scoringEngineUrl = "https://scoringtest.credable.io";
 
 // Register Middleware with Scoring Engine
 async function registerMiddleware() {
@@ -21,10 +21,9 @@ async function registerMiddleware() {
 			clientDescription: "Middleware for LMS",
 			clientUrl: "http://localhost:4000/transactions",
 			username: "middleware_user",
-			password: "middleware_pwd",
+			password: "middleware_pass",
 		};
 
-		// Try the original Scoring Engine first
 		console.log("Attempting to register with original Scoring Engine...");
 		const res = await axios.post(
 			"https://scoringtest.credable.io/api/v1/client/createClient",
@@ -34,7 +33,7 @@ async function registerMiddleware() {
 		scoringToken = res.data.token;
 		authUsername = payload.username;
 		authPassword = payload.password;
-		scoringEngineUrl = "https://scoringtest.credable.io"; // Use original Scoring Engine
+		scoringEngineUrl = "https://scoringtest.credable.io";
 		console.log(
 			"Middleware registered successfully with original Scoring Engine, token:",
 			scoringToken
@@ -47,7 +46,6 @@ async function registerMiddleware() {
 		);
 		console.log("Falling back to custom Scoring Engine...");
 
-		// Fall back to custom Scoring Engine
 		try {
 			const payload = {
 				clientName: "middleware",
@@ -64,7 +62,7 @@ async function registerMiddleware() {
 			scoringToken = res.data.token;
 			authUsername = payload.username;
 			authPassword = payload.password;
-			scoringEngineUrl = "http://localhost:5000"; // Use custom Scoring Engine
+			scoringEngineUrl = "http://localhost:5000";
 			console.log(
 				"Middleware registered successfully with custom Scoring Engine, token:",
 				scoringToken
@@ -101,7 +99,7 @@ app.get("/transactions", async (req, res) => {
 
 	try {
 		const soapClient = await soap.createClientAsync(
-			"https://trxapitest.credable.io/service/transactionWsdl.wsdl"
+			"http://localhost:8093/service/transactions?wsdl" // Updated to use the unified mock CBS API
 		);
 		soapClient.setSecurity(
 			new soap.BasicAuthSecurity(
@@ -110,15 +108,17 @@ app.get("/transactions", async (req, res) => {
 			)
 		);
 
-		const [transactions] = await new Promise((resolve, reject) => {
+		const response = await new Promise((resolve, reject) => {
 			soapClient.getTransactions({ customerNumber }, (err, result) => {
 				if (err) {
 					reject(err);
 				} else {
-					resolve([result.return || result]);
+					resolve(result);
 				}
 			});
 		});
+
+		const transactions = response.transactions || [];
 		console.log("Transactions from CBS:", transactions);
 		res.json(transactions);
 	} catch (error) {
