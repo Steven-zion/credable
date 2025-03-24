@@ -3,3 +3,6 @@ middleware/node_modules
 
 lms/.env
 lms/node_modules
+
+scoring-engine/.env
+scoring-engine/node_modules
