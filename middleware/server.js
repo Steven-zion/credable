@@ -83,6 +83,7 @@ app.get("/transactions", async (req, res) => {
 				process.env.CBS_PASSWORD || "pwd123"
 			)
 		);
+		
 		const [transactions] = await soapClient.getTransactionsAsync({
 			customerNumber,
 		});

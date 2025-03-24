@@ -72,7 +72,32 @@ async function queryKYC(customerNumber) {
 				process.env.CBS_PASSWORD || "pwd123"
 			)
 		);
-		const [kycData] = await soapClient.getCustomerAsync({ customerNumber });
+
+		// Access the CustomerPortService
+		const customerService = soapClient.CustomerPortService;
+		if (!customerService) {
+			throw new Error("CustomerPortService not found on soapClient");
+		}
+
+		// Access the CustomerPortSoap11 binding
+		const customerPortSoap11 = customerService.CustomerPortSoap11;
+		if (!customerPortSoap11) {
+			throw new Error("CustomerPortSoap11 not found on CustomerPortService");
+		}
+
+		// Use the synchronous Customer method and wrap it in a Promise
+		const kycData = await new Promise((resolve, reject) => {
+			customerPortSoap11.Customer({ customerNumber }, (err, result) => {
+				if (err) {
+					reject(err);
+				} else {
+					// The result might be wrapped in a property (e.g., result.return)
+					resolve(result.return || result);
+				}
+			});
+		});
+
+		console.log("KYC Data:", kycData);
 		return kycData;
 	} catch (error) {
 		console.error("Error querying KYC:", error.message);
