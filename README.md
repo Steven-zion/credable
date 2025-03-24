@@ -1,10 +1,11 @@
 # Loan Management System
 
-This project implements a Loan Management System (LMS) with a mock Core Banking System (CBS), a custom Scoring Engine, and a Middleware layer, as per the assessment requirements. The system is designed to run locally and can be tested using tools like Postman.
+This project implements a Loan Management System (LMS) with a mock Core Banking System (CBS), a custom Scoring Engine, and a Middleware layer, as per the assessment requirements. The system is designed to run locally and can be tested using tools like Postman or cURL.
 
 ## Project Overview
 
 The system consists of four backend servers that work together to simulate a loan management process:
+
 - **Mock CBS API**: Simulates a Core Banking System, providing KYC and transaction data.
 - **Custom Scoring Engine**: Calculates loan limits and credit scores based on transaction data.
 - **Middleware**: Connects the LMS to the CBS and Scoring Engine, handling authentication and data retrieval.
@@ -16,12 +17,13 @@ The system consists of four backend servers that work together to simulate a loa
 - `scoring-engine/server.js`: Custom Scoring Engine (port 5000).
 - `middleware/server.js`: Middleware layer (port 4000).
 - `lms/server.js`: Loan Management System (port 3000).
-- `.env`: file for environment variables.
+- `.env`: File for environment variables. (for each server)
 - `package.json`: Node.js dependencies and scripts.
 
 ## Server Functions
 
 ### 1. Mock CBS API (`server.js`)
+
 - **Function**: Simulates a Core Banking System by providing KYC (Know Your Customer) and transaction data for customers.
 - **Endpoints**:
   - `/service/customer?wsdl` (SOAP): Returns KYC data for a given `customerNumber`.
@@ -35,6 +37,7 @@ The system consists of four backend servers that work together to simulate a loa
 - **Port**: `8093`.
 
 ### 2. Custom Scoring Engine (`server.js`)
+
 - **Function**: Calculates a loan limit (`limitAmount`) and credit score for customers based on their transaction data.
 - **Endpoints**:
   - `/api/v1/client/createClient` (POST): Registers a client (e.g., Middleware) and returns a token.
@@ -55,6 +58,7 @@ The system consists of four backend servers that work together to simulate a loa
 - **Port**: `5000`.
 
 ### 3. Middleware (`server.js`)
+
 - **Function**: Acts as an intermediary between the LMS, CBS, and Scoring Engine, handling authentication and data retrieval.
 - **Startup**:
   - Registers with the Scoring Engine (`http://localhost:5000/api/v1/client/createClient`) to get a `scoringToken`.
@@ -63,13 +67,14 @@ The system consists of four backend servers that work together to simulate a loa
     - Query: `?customerNumber=234774784`
     - Headers: Basic Auth (username/password from Scoring Engine registration).
     - Response: `[ { alternativechanneltrnscrAmount: 25000, ... }, ... ]`
-  - `/token` (GET): Provides the `scoringToken` and `scoringEngineUrl` to the LMS.
+  - `/token` (GET): Provides the `scoringToken` and `serverUrl` to the LMS.
     - Headers: `{ "x-api-key": "lms-secret-key" }`
-    - Response: `{ scoringToken: "some-uuid", scoringEngineUrl: "http://localhost:5000" }`
+    - Response: `{ scoringToken: "some-uuid", serverUrl: "http://localhost:5000" }`
 - **Fallback**: Returns mock transaction data if the CBS is unavailable.
 - **Port**: `4000`.
 
 ### 4. Loan Management System (`server.js`)
+
 - **Function**: Manages customer subscriptions and loan requests, storing data in MongoDB Atlas.
 - **Database**:
   - `Customer` collection: Stores `customerNumber` and `kycData`.
@@ -91,6 +96,7 @@ The system consists of four backend servers that work together to simulate a loa
 The servers communicate via HTTP (REST) and SOAP protocols, with authentication to ensure secure interactions:
 
 1. **Mock CBS API ↔ Middleware ↔ LMS**:
+
    - **Connection**:
      - LMS → CBS: Fetches KYC data during subscription (`/service/customer`).
      - Middleware → CBS: Fetches transaction data for scoring (`/service/transactions`).
@@ -98,9 +104,10 @@ The servers communicate via HTTP (REST) and SOAP protocols, with authentication 
    - **Flow**: LMS calls CBS for KYC; Middleware calls CBS for transactions when requested by the Scoring Engine.
 
 2. **Scoring Engine ↔ Middleware ↔ LMS**:
+
    - **Connection**:
      - Middleware → Scoring Engine: Registers on startup (`/createClient`) to get a `scoringToken`.
-     - LMS → Middleware: Gets the `scoringToken` and `scoringEngineUrl` (`/token`).
+     - LMS → Middleware: Gets the `scoringToken` and `serverUrl` (`/token`).
      - Scoring Engine → Middleware: Fetches transaction data (`/transactions`).
      - LMS → Scoring Engine: Initiates scoring and queries the score (`/initiateQueryScore`, `/queryScore`).
    - **Link**:
@@ -118,6 +125,177 @@ The servers communicate via HTTP (REST) and SOAP protocols, with authentication 
 ## Installation and Setup
 
 ### Prerequisites
+
 - **Node.js**: v18 or higher.
 - **MongoDB Atlas**: A free account for the LMS database.
-- **Postman**: For testing API endpoints.
+- **Postman** or **cURL**: For testing API endpoints.
+
+### Steps
+
+1. **Clone the Repository**
+
+   ```bash
+   git clone https://github.com/Steven-zion/credable.git
+   cd credable
+   cd lms or cd scoring-engine or cd cbs or cd middleware
+   ```
+   - NOTE: cd into each of the server and setup.
+
+2. **Install Dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Set Up Environment Variables**
+
+   - Copy `.env.example` to `.env` for both lms and middleware:
+
+     ```bash
+     cp .env.example .env
+     ```
+
+   - Edit `.env` with your MongoDB Atlas URI and other credentials:
+
+     ```plaintext
+     MONGO_ATLAS_URI=<your-mongodb-atlas-uri>
+     LMS_API_KEY=lms-secret-key
+     CBS_USERNAME=admin
+     CBS_PASSWORD=pwd123
+     MIDDLEWARE_USERNAME=middleware_user
+     MIDDLEWARE_PASSWORD=middleware_pass
+     ```
+
+   - **Note**: Replace `<your-mongodb-atlas-uri>` with your MongoDB Atlas connection string (e.g., `mongodb+srv://<username>:<password>@cluster0.mongodb.net/lms?retryWrites=true&w=majority`).
+
+4. **Run the System**
+
+   - Start each server separately (CBS, Scoring Engine, Middleware, LMS):
+
+     ```bash
+     npm run server
+     ```
+
+   - **Note**: This runs all servers concurrently using the scripts in `package.json`.
+   - Servers will run on the following ports:
+     - Mock CBS: `http://localhost:8093`
+     - Scoring Engine: `http://localhost:5000`
+     - Middleware: `http://localhost:4000`
+     - LMS: `http://localhost:3000`
+
+## Testing the System
+
+The system can be tested using Postman or cURL. Below are the steps to test the core functionality with a sample customer ID (`234774784`). Additional test customer IDs: `318411216`, `340397370`, `366585630`, `397178638`.
+
+### Test Case 1: Subscribe a Customer
+
+- **Endpoint**: `POST http://localhost:3000/subscribe`
+- **Request**:
+
+  ```json
+  {
+  	"customerNumber": "234774784"
+  }
+  ```
+
+- **Expected Response**:
+
+  - Status: `200 OK`
+  - Body:
+
+    ```json
+    {
+    	"status": "subscribed",
+    	"customerNumber": "234774784"
+    }
+    ```
+
+- **cURL Command**:
+
+  ```bash
+  curl -X POST http://localhost:3000/subscribe \
+    -H "Content-Type: application/json" \
+    -d '{"customerNumber": "234774784"}'
+  ```
+
+- **Expected Logs**:
+  - Mock CBS: `Received KYC request for customerNumber: 234774784`.
+  - LMS: `KYC Data: { customerNumber: '234774784', ... }`.
+
+### Test Case 2: Request a Loan
+
+- **Endpoint**: `POST http://localhost:3000/loan/request`
+- **Request**:
+
+  ```json
+  {
+  	"customerNumber": "234774784",
+  	"amount": 50000
+  }
+  ```
+
+- **Expected Response**:
+
+  - Status: `200 OK`
+  - Body: (Depends on the `limitAmount`)
+
+    ```json
+    {
+    	"status": "approved",
+    	"request_id": "some-timestamp"
+    }
+    ```
+
+- **cURL Command**:
+
+  ```bash
+  curl -X POST http://localhost:3000/loan/request \
+    -H "Content-Type: application/json" \
+    -d '{"customerNumber": "234774784", "amount": 50000}'
+  ```
+
+- **Expected Logs**:
+  - Mock CBS: `Received transaction request for customerNumber: 234774784`.
+  - Middleware: `Transactions from CBS: [...]`.
+  - Scoring Engine: `Final limitAmount for 234774784: [some value]`.
+  - **Note**: The `limitAmount` varies based on transaction data. For example, if `limitAmount = 123500`, the loan of `50000` will be approved (`50000 <= 123500`).
+
+### Test Case 3: Check Loan Status
+
+- **Endpoint**: `GET http://localhost:3000/loan/status?requestId=<request_id>`
+- **Request**: Replace `<request_id>` with the `request_id` from the previous step.
+- **Expected Response**:
+
+  - Status: `200 OK`
+  - Body:
+
+    ```json
+    {
+    	"status": "approved",
+    	"amount": 50000,
+    	"request_id": "some-timestamp"
+    }
+    ```
+
+- **cURL Command**:
+
+  ```bash
+  curl -X GET http://localhost:3000/loan/status?requestId=<request_id>
+  ```
+
+- **Expected Logs**:
+  - LMS: (MongoDB query executed, no specific log).
+
+## Screencast Video
+
+- **Link**: `https://youtube.com`.
+
+## Deployment
+
+- The system is designed to run locally. Follow the setup instructions above to deploy and run all modules on your machine.
+- All servers communicate via HTTP (REST) and SOAP, with logs to help debug any issues.
+
+## Notes
+
+- **Scoring Logic**: The Scoring Engine uses multiple transaction fields for a realistic `limitAmount` calculation.
+- **Security**: Basic Auth and API keys are used for secure communication between servers.
