@@ -8,16 +8,18 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
+// Dynamic variables
 let scoringToken = "";
 let authUsername = "";
 let authPassword = "";
-let scoringEngineUrl = "https://scoringtest.credable.io";
+const scoringEngineUrl = "http://localhost:5000"; // Only use the custom Scoring Engine
 
 // Utility functions for dynamic data
 const getRandomNumber = (min, max) => Math.random() * (max - min) + min;
 const getRandomInt = (min, max) =>
 	Math.floor(Math.random() * (max - min + 1)) + min;
 
+// Register Middleware with Custom Scoring Engine
 async function registerMiddleware() {
 	try {
 		const payload = {
@@ -27,61 +29,29 @@ async function registerMiddleware() {
 			username: process.env.MIDDLEWARE_USERNAME || "middleware_user",
 			password: process.env.MIDDLEWARE_PASSWORD || "middleware_pass",
 		};
-
-		console.log("Attempting to register with original Scoring Engine...");
 		const res = await axios.post(
-			"https://scoringtest.credable.io/api/v1/client/createClient",
+			"http://localhost:5000/api/v1/client/createClient",
 			payload,
 			{ timeout: 30000 }
 		);
 		scoringToken = res.data.token;
 		authUsername = payload.username;
 		authPassword = payload.password;
-		scoringEngineUrl = "https://scoringtest.credable.io";
 		console.log(
-			"Middleware registered successfully with original Scoring Engine, token:",
+			"Middleware registered successfully with custom Scoring Engine, token:",
 			scoringToken
 		);
 		console.log("Auth credentials:", authUsername, authPassword);
 	} catch (error) {
 		console.error(
-			"Error registering with original Scoring Engine:",
+			"Error registering with custom Scoring Engine:",
 			error.message
 		);
-		console.log("Falling back to custom Scoring Engine...");
-
-		try {
-			const payload = {
-				clientName: "middleware",
-				clientDescription: "Middleware for LMS",
-				clientUrl: "http://localhost:4000/transactions",
-				username: process.env.MIDDLEWARE_USERNAME || "middleware_user",
-				password: process.env.MIDDLEWARE_PASSWORD || "middleware_pass",
-			};
-			const res = await axios.post(
-				"http://localhost:5000/api/v1/client/createClient",
-				payload,
-				{ timeout: 30000 }
-			);
-			scoringToken = res.data.token;
-			authUsername = payload.username;
-			authPassword = payload.password;
-			scoringEngineUrl = "http://localhost:5000";
-			console.log(
-				"Middleware registered successfully with custom Scoring Engine, token:",
-				scoringToken
-			);
-			console.log("Auth credentials:", authUsername, authPassword);
-		} catch (error) {
-			console.error(
-				"Error registering with custom Scoring Engine:",
-				error.message
-			);
-			throw error;
-		}
+		throw error;
 	}
 }
 
+// Fetch Transactions from CBS
 app.get("/transactions", async (req, res) => {
 	const { customerNumber } = req.query;
 	if (!customerNumber) {
@@ -152,6 +122,7 @@ app.get("/transactions", async (req, res) => {
 	}
 });
 
+// Provide Scoring Token and Scoring Engine URL to LMS
 app.get("/token", (req, res) => {
 	const apiKey = req.headers["x-api-key"];
 	if (apiKey !== process.env.LMS_API_KEY) {
@@ -162,6 +133,7 @@ app.get("/token", (req, res) => {
 	res.json({ scoringToken, scoringEngineUrl });
 });
 
+// Start the Middleware
 registerMiddleware()
 	.then(() => {
 		app.listen(4000, () => console.log("Middleware running on port 4000"));
