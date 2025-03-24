@@ -22,7 +22,7 @@ The system consists of four backend servers that work together to simulate a loa
 
 ## Server Functions
 
-### 1. Mock CBS API (`server.js`)
+### 1. Mock CBS API (`cbs/server.js`)
 
 - **Function**: Simulates a Core Banking System by providing KYC (Know Your Customer) and transaction data for customers.
 - **Endpoints**:
@@ -36,7 +36,7 @@ The system consists of four backend servers that work together to simulate a loa
 - **Authentication**: Basic Auth (`admin:pwd123`, configurable via `.env`).
 - **Port**: `8093`.
 
-### 2. Custom Scoring Engine (`server.js`)
+### 2. Custom Scoring Engine (`scoring-engine/server.js`)
 
 - **Function**: Calculates a loan limit (`limitAmount`) and credit score for customers based on their transaction data.
 - **Endpoints**:
@@ -57,7 +57,7 @@ The system consists of four backend servers that work together to simulate a loa
   - **Score**: `Math.min(850, 300 + (baseCreditAmount / 1000))` (ranges from 300 to 850).
 - **Port**: `5000`.
 
-### 3. Middleware (`server.js`)
+### 3. Middleware (`middleware/server.js`)
 
 - **Function**: Acts as an intermediary between the LMS, CBS, and Scoring Engine, handling authentication and data retrieval.
 - **Startup**:
@@ -73,7 +73,7 @@ The system consists of four backend servers that work together to simulate a loa
 - **Fallback**: Returns mock transaction data if the CBS is unavailable.
 - **Port**: `4000`.
 
-### 4. Loan Management System (`server.js`)
+### 4. Loan Management System (`lms/server.js`)
 
 - **Function**: Manages customer subscriptions and loan requests, storing data in MongoDB Atlas.
 - **Database**:
@@ -293,7 +293,7 @@ The system can be tested using Postman or cURL. Below are the steps to test the 
 ## Deployment
 
 - The system is designed to run locally. Follow the setup instructions above to deploy and run all modules on your machine.
-- All servers communicate via HTTP (REST) and SOAP, with logs to help debug any issues.
+- All servers communicate via HTTP (REST) and SOAP, with logs to help track any issues.
 
 ## Notes
 
