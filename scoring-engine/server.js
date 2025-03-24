@@ -1,22 +1,28 @@
 import express from "express";
 import axios from "axios";
-import { v4 as uuidv4 } from "uuid"; // Import UUID v4
+import { v4 as uuidv4 } from "uuid";
 
 const app = express();
 app.use(express.json());
 
-let registeredClients = {};
+const registeredClients = {};
+const scoringData = {};
 
-// Simulate createClient endpoint
+// Register a client (Middleware)
 app.post("/api/v1/client/createClient", (req, res) => {
 	const { clientName, clientDescription, clientUrl, username, password } =
 		req.body;
-	if (!clientName || !clientUrl || !username || !password) {
-		return res.status(400).json({ error: "Missing required fields" });
+	if (
+		!clientName ||
+		!clientDescription ||
+		!clientUrl ||
+		!username ||
+		!password
+	) {
+		return res.status(400).json({ error: "All fields are required" });
 	}
 
-	const clientId = uuidv4(); // Generate a UUID for the client ID
-	const token = uuidv4(); // Generate a UUID for the token
+	const token = uuidv4();
 	registeredClients[token] = {
 		clientName,
 		clientDescription,
@@ -24,21 +30,11 @@ app.post("/api/v1/client/createClient", (req, res) => {
 		username,
 		password,
 	};
-
-	console.log(
-		`Client registered: ${clientName}, URL: ${clientUrl}, Token: ${token}`
-	);
-	res.json({
-		id: clientId,
-		url: clientUrl,
-		name: clientName,
-		username,
-		password,
-		token,
-	});
+	console.log(`Client registered: ${clientName}, Token: ${token}`);
+	res.json({ token });
 });
 
-// Simulate initiateQueryScore
+// Initiate Scoring
 app.get(
 	"/api/v1/scoring/initiateQueryScore/:customerNumber",
 	async (req, res) => {
@@ -50,7 +46,6 @@ app.get(
 
 		const client = registeredClients[token];
 		try {
-			// Call the Middleware's /transactions endpoint
 			const auth = `Basic ${Buffer.from(
 				`${client.username}:${client.password}`
 			).toString("base64")}`;
@@ -65,8 +60,24 @@ app.get(
 				transactionRes.data
 			);
 
-			// Simulate generating a scoring token
-			const scoreToken = uuidv4(); // Generate a UUID for the score token
+			// Calculate total credit amount from transactions
+			const totalCreditAmount = transactionRes.data.reduce(
+				(sum, transaction) =>
+					sum + (transaction.alternativechanneltrnscrAmount || 0),
+				0
+			);
+			console.log(
+				`Total Credit Amount for ${customerNumber}: ${totalCreditAmount}`
+			);
+
+			// Store scoring data for this customer
+			const scoreToken = uuidv4();
+			scoringData[scoreToken] = {
+				customerNumber,
+				totalCreditAmount,
+				limitAmount: totalCreditAmount * 2, // Calculate limitAmount
+			};
+
 			res.json({ token: scoreToken });
 		} catch (error) {
 			console.error("Error calling /transactions endpoint:", error.message);
@@ -75,7 +86,7 @@ app.get(
 	}
 );
 
-// Simulate queryScore
+// Query Score
 app.get("/api/v1/scoring/queryScore/:token", (req, res) => {
 	const { token } = req.params;
 	const clientToken = req.headers["client-token"];
@@ -83,8 +94,20 @@ app.get("/api/v1/scoring/queryScore/:token", (req, res) => {
 		return res.status(401).json({ error: "Invalid or missing client-token" });
 	}
 
-	// Simulate scoring logic (e.g., based on transaction data)
-	res.json({ limitAmount: 50000 });
+	const data = scoringData[token];
+	if (!data) {
+		return res.status(404).json({ error: "Scoring token not found" });
+	}
+
+	// Return the score and limitAmount
+	const score = 750; // Placeholder score
+	res.json({
+		score,
+		limitAmount: data.limitAmount,
+	});
+
+	// Clean up
+	delete scoringData[token];
 });
 
 app.listen(5000, () =>
