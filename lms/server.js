@@ -41,8 +41,8 @@ const LoanSchema = new mongoose.Schema({
 });
 const Loan = mongoose.model("Loan", LoanSchema);
 
-// Configuration from environment variables
-const LMS_API_KEY = process.env.LMS_API_KEY || "lms-secret-key";
+// Configs
+const LMS_API_KEY = process.env.LMS_API_KEY;
 let scoringToken = "";
 let scoringEngineUrl = "";
 
@@ -86,6 +86,7 @@ async function queryKYC(customerNumber) {
 			throw new Error("CustomerPortSoap11 not found on CoreBankingService");
 		}
 
+		// Fetch KYC data from CBS
 		const response = await new Promise((resolve, reject) => {
 			customerPortSoap11.Customer({ customerNumber }, (err, result) => {
 				if (err) {
@@ -106,14 +107,15 @@ async function queryKYC(customerNumber) {
 	} catch (error) {
 		console.error("Error querying KYC:", error.message);
 		console.warn("Mocking KYC data due to API error");
-		// Dynamic mock data as a fallback
-		return {
-			customerNumber,
-			firstName: `MockFirstName${customerNumber}`,
-			lastName: `MockLastName${customerNumber}`,
-			email: `mock${customerNumber}@example.com`,
-			monthlyIncome: getRandomNumber(2000, 10000),
-		};
+
+		// fallback
+		// return {
+		// 	customerNumber,
+		// 	firstName: `MockFirstName${customerNumber}`,
+		// 	lastName: `MockLastName${customerNumber}`,
+		// 	email: `mock${customerNumber}@example.com`,
+		// 	monthlyIncome: getRandomNumber(2000, 10000),
+		// };
 	}
 }
 
@@ -216,22 +218,29 @@ app.post("/loan/request", async (req, res) => {
 		loan.status = "rejected";
 	}
 	await loan.save();
-	res.json({ status: loan.status, request_id: loan.requestId });
+	res
+		.status(200)
+		.json({ status: loan.status, request_id: loan.requestId });
 });
 
 // Loan Status API
 app.get("/loan/status", async (req, res) => {
-	const { requestId } = req.query;
-	if (!requestId) return res.status(400).json({ error: "Request ID required" });
+	try {
+		const { requestId } = req.query;
+		if (!requestId)
+			return res.status(400).json({ error: "Request ID required" });
 
-	const loan = await Loan.findOne({ requestId });
-	if (!loan) return res.status(404).json({ error: "Loan not found" });
+		const loan = await Loan.findOne({ requestId });
+		if (!loan) return res.status(404).json({ error: "Loan not found" });
 
-	res.json({
-		status: loan.status,
-		amount: loan.amount,
-		request_id: loan.requestId,
-	});
+		res.status(200).json({
+			status: loan.status,
+			amount: loan.amount,
+			request_id: loan.requestId,
+		});
+	} catch (error) {
+		throw new Error("Failed to fetch loan status");
+	}
 });
 
 app.listen(3000, () => console.log("LMS running on port 3000"));

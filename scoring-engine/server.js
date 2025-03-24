@@ -5,9 +5,10 @@ import { v4 as uuidv4 } from "uuid";
 const app = express();
 app.use(express.json());
 
-const registeredClients = {};
-const scoringData = {};
+const registeredClients = {}; // Store registered clients with unique token
+const scoringData = {}; // Store scoring data with unique token
 
+// Register Client with Custom Scoring Engine
 app.post("/api/v1/client/createClient", (req, res) => {
 	const { clientName, clientDescription, clientUrl, username, password } =
 		req.body;
@@ -21,7 +22,7 @@ app.post("/api/v1/client/createClient", (req, res) => {
 		return res.status(400).json({ error: "All fields are required" });
 	}
 
-	const token = uuidv4();
+	const token = uuidv4(); // Generate unique token for client
 	registeredClients[token] = {
 		clientName,
 		clientDescription,
@@ -33,6 +34,7 @@ app.post("/api/v1/client/createClient", (req, res) => {
 	res.json({ token });
 });
 
+// Scoring Engine API for initiating scoring
 app.get(
 	"/api/v1/scoring/initiateQueryScore/:customerNumber",
 	async (req, res) => {
@@ -58,20 +60,57 @@ app.get(
 				transactionRes.data
 			);
 
-			const totalCreditAmount = transactionRes.data.reduce(
+			// Calculation components for limitAmount
+			const totalAlternativeCredit = transactionRes.data.reduce(
 				(sum, transaction) =>
 					sum + (transaction.alternativechanneltrnscrAmount || 0),
 				0
 			);
-			console.log(
-				`Total Credit Amount for ${customerNumber}: ${totalCreditAmount}`
+			const totalCreditTransactions = transactionRes.data.reduce(
+				(sum, transaction) => sum + (transaction.credittransactionsAmount || 0),
+				0
+			);
+			const averageMonthlyBalance =
+				transactionRes.data.reduce(
+					(sum, transaction) => sum + (transaction.monthlyBalance || 0),
+					transactionRes.data.length
+				) / (transactionRes.data.length || 1);
+			const totalBouncedCheques = transactionRes.data.reduce(
+				(sum, transaction) =>
+					sum + (transaction.bouncedChequesDebitNumber || 0),
+				0
 			);
 
+			// Base credit amount: combine alternative channel credit and credit transactions
+			const baseCreditAmount = totalAlternativeCredit + totalCreditTransactions;
+			console.log(
+				`Base Credit Amount (alternative + credit transactions) for ${customerNumber}: ${baseCreditAmount}`
+			);
+
+			// Adjust based on monthly balance (positive factor)
+			const balanceMultiplier = 1 + averageMonthlyBalance / 1000000; // e.g., +10% for every 1M in balance
+			console.log(
+				`Average Monthly Balance: ${averageMonthlyBalance}, Balance Multiplier: ${balanceMultiplier}`
+			);
+
+			// Adjust based on bounced cheques (negative factor)
+			const riskPenalty =
+				totalBouncedCheques > 0 ? 1 - totalBouncedCheques * 0.05 : 1; // e.g., -5% per bounced cheque
+			console.log(
+				`Total Bounced Cheques: ${totalBouncedCheques}, Risk Penalty: ${riskPenalty}`
+			);
+
+			// Calculate final limitAmount
+			const limitAmount =
+				baseCreditAmount * 2 * balanceMultiplier * riskPenalty;
+			console.log(`Final limitAmount for ${customerNumber}: ${limitAmount}`);
+
+			// Store scoring data for this customer
 			const scoreToken = uuidv4();
 			scoringData[scoreToken] = {
 				customerNumber,
-				totalCreditAmount,
-				limitAmount: totalCreditAmount * 2,
+				totalCreditAmount: baseCreditAmount, // For score calculation in queryScore
+				limitAmount,
 			};
 
 			res.json({ token: scoreToken });
@@ -82,6 +121,7 @@ app.get(
 	}
 );
 
+// Scoring Engine API for querying score
 app.get("/api/v1/scoring/queryScore/:token", (req, res) => {
 	const { token } = req.params;
 	const clientToken = req.headers["client-token"];
@@ -95,8 +135,7 @@ app.get("/api/v1/scoring/queryScore/:token", (req, res) => {
 	}
 
 	// Dynamic score based on totalCreditAmount
-	const score = Math.min(850, 300 + data.totalCreditAmount / 1000); // score increases with credit amount
-
+	const score = Math.min(850, 300 + data.totalCreditAmount / 1000);
 	res.json({
 		score,
 		limitAmount: data.limitAmount,

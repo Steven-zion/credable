@@ -8,11 +8,10 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-// Dynamic variables
 let scoringToken = "";
 let authUsername = "";
 let authPassword = "";
-const scoringEngineUrl = "http://localhost:5000"; // Only use the custom Scoring Engine
+const scoringEngineUrl = "http://localhost:5000"; // Custom Scoring Engine URL
 
 // Utility functions for dynamic data
 const getRandomNumber = (min, max) => Math.random() * (max - min) + min;
@@ -26,8 +25,8 @@ async function registerMiddleware() {
 			clientName: "middleware",
 			clientDescription: "Middleware for LMS",
 			clientUrl: "http://localhost:4000/transactions",
-			username: process.env.MIDDLEWARE_USERNAME || "middleware_user",
-			password: process.env.MIDDLEWARE_PASSWORD || "middleware_pass",
+			username: process.env.MIDDLEWARE_USERNAME,
+			password: process.env.MIDDLEWARE_PASSWORD,
 		};
 		const res = await axios.post(
 			"http://localhost:5000/api/v1/client/createClient",
@@ -71,13 +70,14 @@ app.get("/transactions", async (req, res) => {
 	}
 
 	try {
+		// Create SOAP client that will fetch transactions from CBS
 		const soapClient = await soap.createClientAsync(
 			"http://localhost:8093/service/transactions?wsdl"
 		);
 		soapClient.setSecurity(
 			new soap.BasicAuthSecurity(
-				process.env.CBS_USERNAME || "admin",
-				process.env.CBS_PASSWORD || "pwd123"
+				process.env.CBS_USERNAME,
+				process.env.CBS_PASSWORD
 			)
 		);
 
@@ -91,6 +91,7 @@ app.get("/transactions", async (req, res) => {
 			throw new Error("TransactionPortSoap11 not found on CoreBankingService");
 		}
 
+		// Fetch transactions from CBS
 		const response = await new Promise((resolve, reject) => {
 			transactionPortSoap11.getTransactions(
 				{ customerNumber },
@@ -106,7 +107,8 @@ app.get("/transactions", async (req, res) => {
 
 		const transactions = response.transactions || [];
 		console.log("Transactions from CBS:", transactions);
-		res.json(transactions);
+
+		res.status(200).json(transactions);
 	} catch (error) {
 		console.error("Error fetching transactions:", error.message);
 		const mockTransactions = [
@@ -122,7 +124,7 @@ app.get("/transactions", async (req, res) => {
 	}
 });
 
-// Provide Scoring Token and Scoring Engine URL to LMS
+// send scoring token and scoring engine url to LMS
 app.get("/token", (req, res) => {
 	const apiKey = req.headers["x-api-key"];
 	if (apiKey !== process.env.LMS_API_KEY) {

@@ -231,7 +231,7 @@ const wsdl = `
 
 // Service implementation
 const service = {
-	CoreBankingService: {
+	CoreBankingService: { // name of the service
 		CustomerPortSoap11: {
 			Customer: (args, callback) => {
 				const { customerNumber } = args;
@@ -266,7 +266,8 @@ const service = {
 				console.log(
 					`Received transaction request for customerNumber: ${customerNumber}`
 				);
-				// Generate dynamic transaction data
+        
+				// Generating dynamic transaction data
 				const numTransactions = getRandomInt(1, 3); // Random number of transactions (1-3)
 				const transactions = Array.from(
 					{ length: numTransactions },
@@ -352,7 +353,7 @@ const service = {
 };
 
 const app = express();
-soap.listen(app, "/service/customer", service, wsdl);
-soap.listen(app, "/service/transactions", service, wsdl);
+soap.listen(app, "/service/customer", service, wsdl); // expose the customer service
+soap.listen(app, "/service/transactions", service, wsdl); // expose the transaction service
 
 app.listen(8093, () => console.log("Mock CBS API running on port 8093"));
