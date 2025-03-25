@@ -1,6 +1,6 @@
 # Digital Lending Platform.
 
-This project implements a Digital Lending Platform. (LMS) with a mock Core Banking System (CBS), a custom Scoring Engine and a Middleware layer. The system is designed to run locally and can be tested using tools like Postman or cURL. It allows users to subscribe, request loan and check loan status.
+This project implements a Digital Lending Platform with a mock Core Banking System (CBS), a custom Scoring Engine and a Middleware layer. The system is designed to run locally and can be tested using tools like Postman or cURL. It allows users to subscribe, request loan and check loan status.
 
 ## Project Overview
 
@@ -9,7 +9,7 @@ The system consists of four backend servers that work together to simulate a loa
 - **Mock CBS API**: Simulates a Core Banking System, providing KYC and transaction data.
 - **Custom Scoring Engine**: Calculates loan limits and credit scores based on transaction data.
 - **Middleware**: Connects the LMS to the CBS and Scoring Engine, handling authentication and data retrieval.
-- **Digital Lending Platform. (LMS)**: Manages customer subscriptions and loan requests, storing data in MongoDB Atlas.
+- **Digital Lending Platform**: Manages customer subscriptions and loan requests, storing data in MongoDB Atlas.
 
 ## Project Structure
 
