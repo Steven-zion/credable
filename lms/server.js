@@ -63,7 +63,7 @@ async function fetchScoringToken() {
 	}
 }
 
-// Query KYC from Mock CBS
+// Query KYC from CBS
 async function queryKYC(customerNumber) {
 	try {
 		const soapClient = await soap.createClientAsync(
@@ -106,16 +106,6 @@ async function queryKYC(customerNumber) {
 		return kycData;
 	} catch (error) {
 		console.error("Error querying KYC:", error.message);
-		console.warn("Mocking KYC data due to API error");
-
-		// fallback
-		// return {
-		// 	customerNumber,
-		// 	firstName: `MockFirstName${customerNumber}`,
-		// 	lastName: `MockLastName${customerNumber}`,
-		// 	email: `mock${customerNumber}@example.com`,
-		// 	monthlyIncome: getRandomNumber(2000, 10000),
-		// };
 	}
 }
 

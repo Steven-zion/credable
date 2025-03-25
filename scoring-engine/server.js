@@ -81,19 +81,19 @@ app.get(
 				0
 			);
 
-			// Base credit amount: combine alternative channel credit and credit transactions
+			// Base credit amount
 			const baseCreditAmount = totalAlternativeCredit + totalCreditTransactions;
 			console.log(
 				`Base Credit Amount (alternative + credit transactions) for ${customerNumber}: ${baseCreditAmount}`
 			);
 
-			// Adjust based on monthly balance (positive factor)
+			// based on monthly balance
 			const balanceMultiplier = 1 + averageMonthlyBalance / 1000000; // e.g., +10% for every 1M in balance
 			console.log(
 				`Average Monthly Balance: ${averageMonthlyBalance}, Balance Multiplier: ${balanceMultiplier}`
 			);
 
-			// Adjust based on bounced cheques (negative factor)
+			// based on bounced cheques
 			const riskPenalty =
 				totalBouncedCheques > 0 ? 1 - totalBouncedCheques * 0.05 : 1; // e.g., -5% per bounced cheque
 			console.log(

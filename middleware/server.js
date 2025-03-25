@@ -13,11 +13,6 @@ let authUsername = "";
 let authPassword = "";
 const scoringEngineUrl = "http://localhost:5000"; // Custom Scoring Engine URL
 
-// Utility functions for dynamic data
-const getRandomNumber = (min, max) => Math.random() * (max - min) + min;
-const getRandomInt = (min, max) =>
-	Math.floor(Math.random() * (max - min + 1)) + min;
-
 // Register Middleware with Custom Scoring Engine
 async function registerMiddleware() {
 	try {
@@ -111,16 +106,6 @@ app.get("/transactions", async (req, res) => {
 		res.status(200).json(transactions);
 	} catch (error) {
 		console.error("Error fetching transactions:", error.message);
-		const mockTransactions = [
-			{
-				accountNumber: `mocked-account-${customerNumber}`,
-				alternativechanneltrnscrAmount: getRandomNumber(1000, 10000),
-				alternativechanneltrnscrNumber: getRandomInt(0, 10),
-				alternativechanneltrnsdebitAmount: getRandomNumber(500, 5000),
-			},
-		];
-		console.log("Mocked transactions:", mockTransactions);
-		res.json(mockTransactions);
 	}
 });
 
