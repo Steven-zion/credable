@@ -1,6 +1,6 @@
-# Loan Management System
+# Digital Lending Platform.
 
-This project implements a Loan Management System (LMS) with a mock Core Banking System (CBS), a custom Scoring Engine and a Middleware layer. The system is designed to run locally and can be tested using tools like Postman or cURL. It allows users to subscribe, request loan and check loan status.
+This project implements a Digital Lending Platform. (LMS) with a mock Core Banking System (CBS), a custom Scoring Engine and a Middleware layer. The system is designed to run locally and can be tested using tools like Postman or cURL. It allows users to subscribe, request loan and check loan status.
 
 ## Project Overview
 
@@ -9,14 +9,14 @@ The system consists of four backend servers that work together to simulate a loa
 - **Mock CBS API**: Simulates a Core Banking System, providing KYC and transaction data.
 - **Custom Scoring Engine**: Calculates loan limits and credit scores based on transaction data.
 - **Middleware**: Connects the LMS to the CBS and Scoring Engine, handling authentication and data retrieval.
-- **Loan Management System (LMS)**: Manages customer subscriptions and loan requests, storing data in MongoDB Atlas.
+- **Digital Lending Platform. (LMS)**: Manages customer subscriptions and loan requests, storing data in MongoDB Atlas.
 
 ## Project Structure
 
 - `cbs/server.js`: Mock CBS API (port 8093).
 - `scoring-engine/server.js`: Custom Scoring Engine (port 5000).
 - `middleware/server.js`: Middleware layer (port 4000).
-- `lms/server.js`: Loan Management System (port 3000).
+- `lms/server.js`: Digital Lending Platform. (port 3000).
 - `.env`: File for environment variables. (for each server)
 - `package.json`: Node.js dependencies and scripts.
 
@@ -73,7 +73,7 @@ The system consists of four backend servers that work together to simulate a loa
 - **Fallback**: Returns mock transaction data if the CBS is unavailable.
 - **Port**: `4000`.
 
-### 4. Loan Management System (`lms/server.js`)
+### 4. Digital Lending Platform. (`lms/server.js`)
 
 - **Function**: Manages customer subscriptions and loan requests, storing data in MongoDB Atlas.
 - **Database**:
