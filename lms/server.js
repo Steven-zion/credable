@@ -51,7 +51,7 @@ async function fetchScoringToken() {
 	try {
 		const res = await axios.get("http://localhost:4000/token", {
 			headers: { "x-api-key": LMS_API_KEY },
-			timeout: 5000,
+			timeout: 5000, // retries the request if it takes more than 5 seconds
 		});
 		scoringToken = res.data.scoringToken;
 		scoringEngineUrl = res.data.scoringEngineUrl;
@@ -114,7 +114,7 @@ async function initiateScoring(customerNumber) {
 	try {
 		const res = await axios.get(
 			`${scoringEngineUrl}/api/v1/scoring/initiateQueryScore/${customerNumber}`,
-			{ headers: { "client-token": scoringToken }, timeout: 5000 }
+			{ headers: { "client-token": scoringToken }, timeout: 5000 } // retries the request if it takes more than 5 seconds
 		);
 		return res.data.token;
 	} catch (error) {
@@ -123,16 +123,38 @@ async function initiateScoring(customerNumber) {
 	}
 }
 
-async function queryScore(token) {
-	try {
-		const res = await axios.get(
-			`${scoringEngineUrl}/api/v1/scoring/queryScore/${token}`,
-			{ headers: { "client-token": scoringToken }, timeout: 5000 }
-		);
-		return res.data;
-	} catch (error) {
-		console.error("Error querying score:", error.message);
-		return null;
+async function queryScore(token, maxRetries = 5, delayMs = 2000) {
+	let attempts = 0;
+
+	// Retry request if scoring is still processing
+	while (attempts < maxRetries) {
+		try {
+			const res = await axios.get(
+				`${scoringEngineUrl}/api/v1/scoring/queryScore/${token}`,
+				{ headers: { "client-token": scoringToken } }
+			);
+			const scoreData = res.data;
+
+			// Assuming the scoring engine returns a status indicating if it's still processing
+			if (scoreData.status === "processing") {
+				throw new Error("Score still processing"); // Retry if processing
+			}
+
+			return scoreData; // Return data if successful
+		} catch (error) {
+			attempts++;
+			console.error(
+				`Attempt ${attempts}/${maxRetries} failed: ${error.message}`
+			);
+
+			if (attempts === maxRetries) {
+				console.error("Max retries reached. Failing loan application.");
+				return null; // Fail after exhausting retries
+			}
+
+			// Wait before the next retry
+			await new Promise((resolve) => setTimeout(resolve, delayMs));
+		}
 	}
 }
 
@@ -201,16 +223,15 @@ app.post("/loan/request", async (req, res) => {
 	});
 	await loan.save();
 
-	const scoreData = await queryScore(scoringTokenResponse);
-	if (scoreData) {
+	const scoreData = await queryScore(scoringTokenResponse, 5, 2000); // 5 retries, 2-second delay
+	if (scoreData && scoreData.limitAmount !== undefined) {
 		loan.status = amount <= scoreData.limitAmount ? "approved" : "rejected";
 	} else {
-		loan.status = "rejected";
+		loan.status = "rejected"; // Fail if !scoreData after retries
 	}
 	await loan.save();
-	res
-		.status(200)
-		.json({ status: loan.status, request_id: loan.requestId });
+
+	res.status(200).json({ status: loan.status, request_id: loan.requestId });
 });
 
 // Loan Status API
